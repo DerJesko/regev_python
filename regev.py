@@ -62,6 +62,14 @@ class BatchedRegevCiphertext:
             ((self.c2 - self.c1 @ sk.sec) % pk.cipher_mod) * mes_mod) / pk.cipher_mod
         return mround(noisy_message) % mes_mod
 
+    def pack(self, pk: BatchedRegevPublicKey):
+        r = uniform(pk.cipher_mod)
+        while not PackedRegevCiphertext._near_mes(r+self.c2, pk.bound, pk.cipher_mod, self.mes_mod):
+            r = uniform(pk.cipher_mod)
+        c2 = mround(((((self.c2 + r) % pk.cipher_mod) * self.mes_mod) /
+                     pk.cipher_mod)) % self.mes_mod
+        return PackedRegevCiphertext(self.c1, c2, r, self.mes_mod)
+
 
 class PackedRegevCiphertext:
     def __init__(self, c1: np.ndarray, c2: np.ndarray, r: int, mes_mod: int):
@@ -69,15 +77,6 @@ class PackedRegevCiphertext:
         self.c2 = c2
         self.r = r
         self.mes_mod = mes_mod
-
-    @classmethod
-    def pack(cls, pk: BatchedRegevPublicKey, c: BatchedRegevCiphertext):
-        r = uniform(pk.cipher_mod)
-        while not PackedRegevCiphertext._near_mes(r+c.c2, pk.bound, pk.cipher_mod, c.mes_mod):
-            r = uniform(pk.cipher_mod)
-        c2 = mround(((((c.c2 + r) % pk.cipher_mod) * c.mes_mod) /
-                     pk.cipher_mod)) % c.mes_mod
-        return PackedRegevCiphertext(c.c1, c2, r, c.mes_mod)
 
     @classmethod
     def _near_mes_scalar(cls, x: int, bound: int, cipher_mod: int, mes_mod: int):
