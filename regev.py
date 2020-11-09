@@ -1,5 +1,5 @@
 import numpy as np
-from utils import mround, uniform, mod_between, binomial
+from utils import mround, uniform, mod_between, binomial, gaussian
 
 
 class BatchedRegevSecretKey:
@@ -22,7 +22,7 @@ class BatchedRegevPublicKey:
         self.cipher_mod = sec_key.cipher_mod
         self.A = uniform(self.cipher_mod, (m, self.n))
         # b = As + e where e is a small gaussian error
-        self.b = (self.A @ sec_key.sec + uniform(bound, (m, self.bs))
+        self.b = (self.A @ sec_key.sec + gaussian(bound, (m, self.bs))
                   ) % self.cipher_mod
 
     def __repr__(self):
