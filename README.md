@@ -12,11 +12,22 @@ The packed version of this scheme combines two modifications which improve ciphe
 To install all necessary dependencies run
 ``` pip install -r requirements.txt ```
 
+## Parameter Choice
+
+Here should be a paragraph about the parameter choice
+
 ## TODOs
 
 - [ ] cli
-- [ ] easier parameter choice
-- [ ] serialization
+- [x] easier parameter choice
+- [x] serialization
+  - [x] keys
+  - [x] ciphertext
+  - [x] packed ciphertext
 - [ ] seeded randomness (smaller secret keys)
 - [ ] speed improvements by implementing parts in C
+  - [ ] serialization
+  - [ ] randomness
 - [ ] addition for packed ciphertexts
+- [x] unit testing framework
+- [ ] package things

@@ -1,33 +1,61 @@
-from regev import BatchedRegevPublicKey, BatchedRegevCiphertext, BatchedRegevSecretKey
+from regev import BatchedRegevPublicKey, BatchedRegevCiphertext, BatchedRegevSecretKey, PackedRegevCiphertext
 import numpy as np
 import time
+import unittest
 
-counter = 0
-secret_key_time = 0
-public_key_time = 0
-encrypt_time = 0
-compress_time = 0
-decrypt_time = 0
-for _ in range(100000):
-    before = time.perf_counter()
-    sk = BatchedRegevSecretKey(10, 300, bs=6)
-    secret_key_time += time.perf_counter()-before
 
-    before = time.perf_counter()
-    pk = BatchedRegevPublicKey(sk, 5, bound=10)
-    public_key_time += time.perf_counter()-before
+class TestKeyGen(unittest.TestCase):
+    def test_sk_gen(self):
+        for _ in range(100):
+            BatchedRegevSecretKey.gen(bs=6)
 
-    before = time.perf_counter()
-    c = BatchedRegevCiphertext.encrypt_raw(pk, np.array(
-        [[2, 1, 0, 1, 3, 1]]), mes_mod=2)
-    encrypt_time += time.perf_counter()-before
+    def test_sk_ser(self):
+        for _ in range(10):
+            sk = BatchedRegevSecretKey.gen(bs=6)
+            sk1 = BatchedRegevSecretKey.from_bytes(sk.to_bytes())
+            assert(sk == sk1)
 
-    before = time.perf_counter()
-    if (c.decrypt(pk, sk) != np.array([[0, 1, 0, 1, 1, 1]])).any():
-        print(c)
-        counter += 1
+    def test_pk_gen(self):
+        sk = BatchedRegevSecretKey.gen(bs=6)
+        for i in range(50):
+            sk.pk_gen(i + 1)
 
-    decrypt_time += time.perf_counter()-before
+    def test_pk_ser(self):
+        sk = BatchedRegevSecretKey.gen(bs=6)
+        for i in range(10):
+            pk = sk.pk_gen(i + 1)
+            pk1 = BatchedRegevPublicKey.from_bytes(pk.to_bytes())
+            assert(pk == pk1)
 
-print(secret_key_time, public_key_time,
-      encrypt_time, compress_time, decrypt_time)
+
+class TestBatRegev(unittest.TestCase):
+    def test_enc(self):
+        for bs in range(5):
+            bs += 1
+            sk = BatchedRegevSecretKey.gen(bs=bs)
+            for _ in range(5):
+                pk = sk.pk_gen(2)
+                for i in range(1, 100):
+                    bss = i + 1
+                    mes = np.zeros((bss, bs), dtype=int) + i
+                    c = BatchedRegevCiphertext.encrypt_raw(pk, mes)
+                    mes1 = c.decrypt(pk, sk)
+                    if not ((mes % 2) == mes1).all():
+                        print(bss, mes1)
+
+    def test_ser_c(self):
+        for bs in range(5):
+            bs += 1
+            sk = BatchedRegevSecretKey.gen(bs=bs)
+            for _ in range(5):
+                pk = sk.pk_gen(2)
+                for i in range(1, 20):
+                    bss = i + 1
+                    mes = np.zeros((bss, bs), dtype=int) + bss
+                    c = BatchedRegevCiphertext.encrypt_raw(pk, mes)
+                    c1 = BatchedRegevCiphertext.from_bytes(c.to_bytes(pk), pk)
+                    assert(c == c1)
+
+
+if __name__ == '__main__':
+    unittest.main()
