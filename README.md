@@ -27,7 +27,7 @@ Here should be a paragraph about the parameter choice
   - [x] packed ciphertext
 - [ ] seeded randomness (smaller secret keys)
 - [ ] speed improvements by implementing parts in Cython
-  - [ ] serialization
+  - [x] serialization
   - [ ] randomness
 - [ ] addition for packed ciphertexts
 - [x] unit testing framework

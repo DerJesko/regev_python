@@ -10,9 +10,19 @@ class TestKeyGen(unittest.TestCase):
         for _ in range(100):
             BatchedRegevSecretKey.gen(bs=6)
 
+    def test_seed_gen(self):
+        for _ in range(100):
+            BatchedRegevSecretKey.gen(bs=6, seed=b"\00"*32)
+
     def test_sk_ser(self):
         for _ in range(100):
             sk = BatchedRegevSecretKey.gen(bs=6)
+            sk1 = BatchedRegevSecretKey.from_bytes(sk.to_bytes())
+            assert(sk == sk1)
+
+    def test_seed_ser(self):
+        for _ in range(100):
+            sk = BatchedRegevSecretKey.gen(bs=6, seed=b"\00"*32)
             sk1 = BatchedRegevSecretKey.from_bytes(sk.to_bytes())
             assert(sk == sk1)
 
@@ -89,12 +99,6 @@ class TestPackRegev(unittest.TestCase):
                     c = BatchedRegevCiphertext.encrypt_raw(pk, mes).pack(pk)
                     c1 = PackedRegevCiphertext.from_bytes(c.to_bytes(pk), pk)
                     assert(c == c1)
-
-
-class TestSer(unittest.TestCase):
-    def test_ser(self):
-        a = np.ones((2, 4), dtype=int)
-        print(serialize_ndarray(a, 2))
 
 
 if __name__ == '__main__':

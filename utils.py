@@ -2,25 +2,48 @@ import secrets as sec
 import numpy as np
 import math
 import struct
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
 
 
-def single_float_uniform():
+class SeededRNG:
+    def __init__(self, seed):
+        self.stream = AES.new(seed, AES.MODE_CTR, counter=Counter.new(128))
+
+    def next(self, num_bytes) -> bytes:
+        return self.stream.encrypt(b"\x00" * num_bytes)
+
+    def randbelow(self, i) -> int:
+        i_bytes = math.ceil(math.log2(i)/8)
+        i_len = math.ceil(math.log2(i))
+        counter = 0
+        while True:
+            counter += 1
+            a = self.next(i_bytes)
+            a = int.from_bytes(a, 'little') >> (i_bytes * 8) - i_len
+            if a < i:
+                return a
+
+
+def single_float_uniform(rng=None):
     """ Returns a uniformly random 32 bit float """
-    return (sec.randbits(32)) / ((1 << 32) - 1)
+    if not rng:
+        return (sec.randbits(32)) / ((1 << 32) - 1)
+    return (int.from_bytes(rng.next(4))) / ((1 << 32) - 1)
 
 
-def gaussian_iter():
+def gaussian_iter(rng=None):
     while True:
-        a = single_float_uniform()
+        a = single_float_uniform(rng)
         a = math.sqrt(-2*math.log(a))
-        b = single_float_uniform()
+        b = single_float_uniform(rng)
         b = 2 * math.pi * b
         yield a * math.sin(b)
         yield a * math.cos(b)
 
 
-def gaussian(bound, shape=1):
-    new_gauss = gaussian_iter()
+def gaussian(bound, shape=1, rng=None):
+    new_gauss = gaussian_iter(rng)
     std_deviation = bound * 2
     arr = np.zeros(shape, dtype=float)
     for idx, _ in np.ndenumerate(arr):
@@ -31,10 +54,12 @@ def gaussian(bound, shape=1):
     return mround(arr)
 
 
-def uniform(limit, shape=1):
+def uniform(limit, shape=1, rng=None):
     arr = np.zeros(shape, dtype=int)
+    if not rng:
+        rng = sec
     for idx, _ in np.ndenumerate(arr):
-        arr[idx] = sec.randbelow(limit)
+        arr[idx] = rng.randbelow(limit)
     return arr
 
 
