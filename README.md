@@ -18,6 +18,7 @@ Here should be a paragraph about the parameter choice
 
 ## TODOs
 
+- [ ] fix correctness of packed regev
 - [ ] cli
 - [x] easier parameter choice
 - [x] serialization
@@ -25,9 +26,10 @@ Here should be a paragraph about the parameter choice
   - [x] ciphertext
   - [x] packed ciphertext
 - [ ] seeded randomness (smaller secret keys)
-- [ ] speed improvements by implementing parts in C
+- [ ] speed improvements by implementing parts in Cython
   - [ ] serialization
   - [ ] randomness
 - [ ] addition for packed ciphertexts
 - [x] unit testing framework
 - [ ] package things
+- [ ] example (federated learning)
