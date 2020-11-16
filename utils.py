@@ -14,8 +14,8 @@ class SeededRNG:
         return self.stream.encrypt(b"\x00" * num_bytes)
 
     def randbelow(self, i) -> int:
-        i_bytes = math.ceil(math.log2(i)/8)
-        i_len = math.ceil(math.log2(i))
+        i_bytes = math.ceil(i.bit_length()/8)
+        i_len = math.ceil(i.bit_length())
         counter = 0
         while True:
             counter += 1

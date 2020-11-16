@@ -25,7 +25,8 @@ Here should be a paragraph about the parameter choice
   - [x] keys
   - [x] ciphertext
   - [x] packed ciphertext
-- [ ] seeded randomness (smaller secret keys)
+- [x] seeded randomness (smaller secret keys)
+  - [ ] remove deprecation warning
 - [ ] speed improvements by implementing parts in Cython
   - [x] serialization
   - [ ] randomness

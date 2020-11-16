@@ -2,6 +2,7 @@ import numpy as np
 import math
 from utils import mround, uniform, mod_between, gaussian, SeededRNG
 from serialize import serialize_ndarray, deserialize_ndarray
+import secrets
 
 
 class BatchedRegevSecretKey:
@@ -15,8 +16,9 @@ class BatchedRegevSecretKey:
     @ classmethod
     def gen(cls, n: int = 752, cipher_mod: int = 1 << 16, bs: int = 1, seed: bytes = None):
         """ Generate a secret key """
-        if seed:
-            rng = SeededRNG(seed)
+        if not seed:
+            seed = secrets.token_bytes(32)
+        rng = SeededRNG(seed)
         return BatchedRegevSecretKey(n=n, cipher_mod=cipher_mod, bs=bs, sec=uniform(cipher_mod, (n, bs), rng), seed=seed)
 
     def pk_gen(self, m: int, bound: int = None):
@@ -40,8 +42,11 @@ class BatchedRegevSecretKey:
         res.extend(self.n.to_bytes(8, "little"))
         res.extend(self.bs.to_bytes(8, "little"))
         res.extend(self.cipher_mod.to_bytes(8, "little"))
-        cipher_mod_len = math.ceil(math.log2(self.cipher_mod)/8)
-        res.extend(serialize_ndarray(self.sec, cipher_mod_len))
+        cipher_mod_len = math.ceil(self.cipher_mod.bit_length()/8)
+        if seed_len == 0:
+            res.extend(serialize_ndarray(self.sec, cipher_mod_len))
+        else:
+            res.extend(self.seed)
         return res
 
     @ classmethod
@@ -51,7 +56,7 @@ class BatchedRegevSecretKey:
         bs = int.from_bytes(b[9:17], "little")
         cipher_mod = int.from_bytes(b[17:25], "little")
         b = b[25:]
-        cipher_mod_len = math.ceil(math.log2(cipher_mod)/8)
+        cipher_mod_len = math.ceil(cipher_mod.bit_length()/8)
         if seed_len == 0:
             sec = deserialize_ndarray(b, (n, bs), cipher_mod_len)
             return BatchedRegevSecretKey(sec=sec, n=n, cipher_mod=cipher_mod, bs=bs)
@@ -83,7 +88,7 @@ class BatchedRegevPublicKey:
         res.extend(self.bound.to_bytes(8, "little"))
         res.extend(self.bs.to_bytes(8, "little"))
         res.extend(self.cipher_mod.to_bytes(8, "little"))
-        cipher_mod_len = math.ceil(math.log2(self.cipher_mod)/8)
+        cipher_mod_len = math.ceil(self.cipher_mod.bit_length()/8)
         res.extend(serialize_ndarray(self.A, cipher_mod_len))
         res.extend(serialize_ndarray(self.b, cipher_mod_len))
         return res
@@ -96,7 +101,7 @@ class BatchedRegevPublicKey:
         bs = int.from_bytes(b[24:32], "little")
         cipher_mod = int.from_bytes(b[32:40], "little")
         b = b[40:]
-        cipher_mod_len = math.ceil(math.log2(cipher_mod)/8)
+        cipher_mod_len = math.ceil(cipher_mod.bit_length()/8)
         A = deserialize_ndarray(b[:cipher_mod_len*n*m], (m, n), cipher_mod_len)
         Ase = deserialize_ndarray(
             b[cipher_mod_len*n*m:], (m, bs), cipher_mod_len)
@@ -141,7 +146,7 @@ class BatchedRegevCiphertext:
         num_batches = self.c1.shape[0]
         res.extend(num_batches.to_bytes(8, "little"))
         # The length of the ciphertext modulus in bytes
-        cipher_mod_len = math.ceil(math.log2(pk.cipher_mod)/8)
+        cipher_mod_len = math.ceil(pk.cipher_mod.bit_length()/8)
         res.extend(self.mes_mod.to_bytes(cipher_mod_len, "little"))
         res.extend(serialize_ndarray(self.c1, cipher_mod_len))
         res.extend(serialize_ndarray(self.c2, cipher_mod_len))
@@ -154,7 +159,7 @@ class BatchedRegevCiphertext:
         c1 = np.zeros((num_batches, pk.n), dtype=int)
         c2 = np.zeros((num_batches, pk.bs), dtype=int)
 
-        cipher_mod_len = math.ceil(math.log2(pk.cipher_mod)/8)
+        cipher_mod_len = math.ceil(pk.cipher_mod.bit_length()/8)
         mes_mod = int.from_bytes(b[:cipher_mod_len], "little")
         b = b[cipher_mod_len:]
         c1 = deserialize_ndarray(b, (num_batches, pk.n), cipher_mod_len)
@@ -196,11 +201,11 @@ class PackedRegevCiphertext:
         num_batches = self.c1.shape[0]
         res.extend(num_batches.to_bytes(8, "little"))
         # The length of the ciphertext modulus in bytes
-        cipher_mod_len = math.ceil(math.log2(pk.cipher_mod)/8)
+        cipher_mod_len = math.ceil(pk.cipher_mod.bit_length()/8)
         res.extend(self.mes_mod.to_bytes(cipher_mod_len, "little"))
         res.extend(int(self.r[0]).to_bytes(cipher_mod_len, "little"))
         res.extend(serialize_ndarray(self.c1, cipher_mod_len))
-        mes_mod_len = math.ceil(math.log2(self.mes_mod)/8)
+        mes_mod_len = math.ceil(self.mes_mod.bit_length()/8)
         res.extend(serialize_ndarray(self.w, mes_mod_len))
         return res
 
@@ -212,14 +217,14 @@ class PackedRegevCiphertext:
         w = np.zeros((num_batches, pk.bs), dtype=int)
         r = np.zeros((1,), dtype=int)
 
-        cipher_mod_len = math.ceil(math.log2(pk.cipher_mod)/8)
+        cipher_mod_len = math.ceil(pk.cipher_mod.bit_length()/8)
         mes_mod = int.from_bytes(b[:cipher_mod_len], "little")
         b = b[cipher_mod_len:]
         r[0] += int.from_bytes(b[:cipher_mod_len], "little")
         b = b[cipher_mod_len:]
         c1 = deserialize_ndarray(b, (num_batches, pk.n), cipher_mod_len)
         b = b[num_batches*pk.n*cipher_mod_len:]
-        mes_mod_len = math.ceil(math.log2(mes_mod)/8)
+        mes_mod_len = math.ceil(mes_mod.bit_length()/8)
         w = deserialize_ndarray(b, (num_batches, pk.bs), mes_mod_len)
         return PackedRegevCiphertext(c1, w, r, mes_mod)
 
