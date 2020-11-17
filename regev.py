@@ -16,16 +16,17 @@ class BatchedRegevSecretKey:
     @ classmethod
     def gen(cls, n: int = 752, cipher_mod: int = 1 << 16, bs: int = 1, seed: bytes = None):
         """ Generate a secret key """
-        if not seed:
-            seed = secrets.token_bytes(32)
+        seed = seed or secrets.token_bytes(32)
         rng = SeededRNG(seed)
-        return BatchedRegevSecretKey(n=n, cipher_mod=cipher_mod, bs=bs, sec=uniform(cipher_mod, (n, bs), rng), seed=seed)
+        return BatchedRegevSecretKey(n=n, cipher_mod=cipher_mod, bs=bs, sec=uniform(cipher_mod, rng, (n, bs)), seed=seed)
 
-    def pk_gen(self, m: int, bound: int = None):
+    def pk_gen(self, m: int, bound: int = None, seed: bytes = None):
+        seed = seed or secrets.token_bytes(32)
+        rng = SeededRNG(seed)
         bound = bound or self.cipher_mod // (40 * self.bs)
-        A = uniform(self.cipher_mod, (m, self.n))
+        A = uniform(self.cipher_mod, rng, (m, self.n))
         # b = As + e where e is a small gaussian error
-        b = (A @ self.sec + gaussian(bound, (m, self.bs))
+        b = (A @ self.sec + gaussian(bound, rng, (m, self.bs))
              ) % self.cipher_mod
         return BatchedRegevPublicKey(self.n, m, bound, self.bs, self.cipher_mod, A, b)
 
@@ -34,19 +35,12 @@ class BatchedRegevSecretKey:
 
     def to_bytes(self) -> bytearray:
         res = bytearray()
-        if self.seed:
-            seed_len = len(self.seed)
-        else:
-            seed_len = 0
+        seed_len = len(self.seed)
         res.extend(seed_len.to_bytes(1, "little"))
         res.extend(self.n.to_bytes(8, "little"))
         res.extend(self.bs.to_bytes(8, "little"))
         res.extend(self.cipher_mod.to_bytes(8, "little"))
-        cipher_mod_len = math.ceil(self.cipher_mod.bit_length()/8)
-        if seed_len == 0:
-            res.extend(serialize_ndarray(self.sec, cipher_mod_len))
-        else:
-            res.extend(self.seed)
+        res.extend(self.seed)
         return res
 
     @ classmethod
@@ -118,12 +112,14 @@ class BatchedRegevCiphertext:
         self.mes_mod = mes_mod
 
     @ classmethod
-    def encrypt_raw(cls, pk: BatchedRegevPublicKey, mes: np.ndarray, mes_mod: int = 2):
+    def encrypt_raw(cls, pk: BatchedRegevPublicKey, mes: np.ndarray, mes_mod: int = 2, seed=None):
+        seed = seed or secrets.token_bytes(32)
+        rng = SeededRNG(seed)
         if mes.ndim != 2:
             raise MessageWrongDimensions()
         if mes.shape[1] != pk.bs:
             raise MessageWrongSize()
-        R = uniform(2, (mes.shape[0], pk.m))
+        R = uniform(2, rng, (mes.shape[0], pk.m))
         c1 = R @ pk.A % pk.cipher_mod
         c2 = (R @ pk.b + mround(pk.cipher_mod / mes_mod)
               * mes) % pk.cipher_mod
@@ -173,10 +169,14 @@ class BatchedRegevCiphertext:
             ((self.c2 - self.c1 @ sk.sec) % pk.cipher_mod) * mes_mod) / pk.cipher_mod
         return mround(noisy_message) % mes_mod
 
-    def pack(self, pk: BatchedRegevPublicKey):
-        r = uniform(pk.cipher_mod)
-        while not PackedRegevCiphertext._near_mes(r+self.c2, pk.bound, pk.cipher_mod, self.mes_mod):
-            r = uniform(pk.cipher_mod)
+    def pack(self, pk: BatchedRegevPublicKey, seed=None):
+        seed = seed or secrets.token_bytes(32)
+        rng = SeededRNG(seed)
+        while True:
+            r = uniform(pk.cipher_mod, rng)
+            if PackedRegevCiphertext._near_mes(r+self.c2, pk.bound, pk.cipher_mod, self.mes_mod):
+                break
+
         c2 = mround(((((self.c2 + r) % pk.cipher_mod) * self.mes_mod) /
                      pk.cipher_mod)) % self.mes_mod
         return PackedRegevCiphertext(self.c1, c2, r, self.mes_mod)

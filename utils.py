@@ -25,14 +25,12 @@ class SeededRNG:
                 return a
 
 
-def single_float_uniform(rng=None):
+def single_float_uniform(rng):
     """ Returns a uniformly random 32 bit float """
-    if not rng:
-        return (sec.randbits(32)) / ((1 << 32) - 1)
-    return (int.from_bytes(rng.next(4))) / ((1 << 32) - 1)
+    return (int.from_bytes(rng.next(4), "little")) / ((1 << 32) - 1)
 
 
-def gaussian_iter(rng=None):
+def gaussian_iter(rng):
     while True:
         a = single_float_uniform(rng)
         a = math.sqrt(-2*math.log(a))
@@ -42,7 +40,7 @@ def gaussian_iter(rng=None):
         yield a * math.cos(b)
 
 
-def gaussian(bound, shape=1, rng=None):
+def gaussian(bound, rng, shape=1):
     new_gauss = gaussian_iter(rng)
     std_deviation = bound * 2
     arr = np.zeros(shape, dtype=float)
@@ -54,10 +52,8 @@ def gaussian(bound, shape=1, rng=None):
     return mround(arr)
 
 
-def uniform(limit, shape=1, rng=None):
+def uniform(limit, rng, shape=1):
     arr = np.zeros(shape, dtype=int)
-    if not rng:
-        rng = sec
     for idx, _ in np.ndenumerate(arr):
         arr[idx] = rng.randbelow(limit)
     return arr
