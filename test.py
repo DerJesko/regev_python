@@ -41,28 +41,32 @@ class TestKeyGen(unittest.TestCase):
 
 class TestBatRegev(unittest.TestCase):
     def test_enc(self):
+        failcounter = 0
+        trycounter = 0
         for bs in range(5):
             bs += 1
             sk = BatchedRegevSecretKey.gen(bs=bs)
             for _ in range(5):
-                pk = sk.pk_gen(2)
+                pk = sk.pk_gen(32)
                 for i in range(1, 100):
-                    bss = i + 1
-                    mes = np.zeros((bss, bs), dtype=int) + i
+                    mes = np.zeros(bs, dtype=int) + i
                     c = BatchedRegevCiphertext.encrypt_raw(pk, mes)
                     mes1 = c.decrypt(pk, sk)
+
+                    trycounter += 1
                     if not ((mes % 2) == mes1).all():
-                        print(bss, mes1)
+                        failcounter += 1
+        assert failcounter == 0, f"{failcounter} out of {trycounter} ciphertext decrypted wrong"
 
     def test_ser_c(self):
         for bs in range(5):
             bs += 1
             sk = BatchedRegevSecretKey.gen(bs=bs)
             for _ in range(5):
-                pk = sk.pk_gen(2)
+                pk = sk.pk_gen(32)
                 for i in range(1, 20):
                     bss = i + 1
-                    mes = np.zeros((bss, bs), dtype=int) + bss
+                    mes = np.zeros((bs), dtype=int) + bss
                     c = BatchedRegevCiphertext.encrypt_raw(pk, mes)
                     c1 = BatchedRegevCiphertext.from_bytes(c.to_bytes(pk), pk)
                     assert c == c1
@@ -70,31 +74,31 @@ class TestBatRegev(unittest.TestCase):
 
 class TestPackRegev(unittest.TestCase):
     def test_enc(self):
-        counter = 0
-        for bs in range(5):
+        failcounter = 0
+        trycounter = 0
+        for bs in range(10):
             bs += 1
             sk = BatchedRegevSecretKey.gen(bs=bs)
-            for _ in range(5):
-                pk = sk.pk_gen(1)
+            for _ in range(10):
+                pk = sk.pk_gen(32)
                 for i in range(100):
-                    bss = i + 1
-                    mes = np.zeros((bss, bs), dtype=int) + i
+                    mes = np.zeros(bs, dtype=int) + i
                     c = BatchedRegevCiphertext.encrypt_raw(pk, mes).pack(pk)
                     mes1 = c.decrypt(pk, sk)
 
+                    trycounter += 1
                     if not ((mes % 2) == mes1).all():
-                        counter += 1
-        assert counter == 0, f"{counter} ciphertext decrypted wrong"
+                        failcounter += 1
+        assert failcounter == 0, f"{failcounter} out of {trycounter} ciphertext decrypted wrong"
 
     def test_ser_c(self):
         for bs in range(5):
             bs += 1
             sk = BatchedRegevSecretKey.gen(bs=bs)
             for _ in range(5):
-                pk = sk.pk_gen(2)
+                pk = sk.pk_gen(32)
                 for i in range(1, 20):
-                    bss = i + 1
-                    mes = np.zeros((bss, bs), dtype=int) + bss
+                    mes = np.zeros(bs, dtype=int) + i
                     c = BatchedRegevCiphertext.encrypt_raw(pk, mes).pack(pk)
                     c1 = PackedRegevCiphertext.from_bytes(c.to_bytes(pk), pk)
                     assert c == c1

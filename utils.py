@@ -52,10 +52,10 @@ def gaussian(bound, rng, shape=1):
     return mround(arr)
 
 
-def uniform(limit, rng, shape=1):
+def uniform(ubound: int, rng, shape=1, lbound: int = 0):
     arr = np.zeros(shape, dtype=int)
     for idx, _ in np.ndenumerate(arr):
-        arr[idx] = rng.randbelow(limit)
+        arr[idx] = rng.randbelow(ubound - lbound) + lbound
     return arr
 
 
