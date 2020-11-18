@@ -10,7 +10,7 @@ class SeededRNG:
     def __init__(self, seed):
         self.stream = AES.new(seed, AES.MODE_CTR, counter=Counter.new(128))
 
-    def next(self, num_bytes) -> bytes:
+    def next_bytes(self, num_bytes) -> bytes:
         return self.stream.encrypt(b"\x00" * num_bytes)
 
     def randbelow(self, i) -> int:
@@ -19,15 +19,15 @@ class SeededRNG:
         counter = 0
         while True:
             counter += 1
-            a = self.next(i_bytes)
+            a = self.next_bytes(i_bytes)
             a = int.from_bytes(a, 'little') >> (i_bytes * 8) - i_len
             if a < i:
                 return a
 
 
-def single_float_uniform(rng):
+def single_float_uniform(rng: SeededRNG):
     """ Returns a uniformly random 32 bit float """
-    return (int.from_bytes(rng.next(4), "little")) / ((1 << 32) - 1)
+    return (int.from_bytes(rng.next_bytes(4), "little")) / ((1 << 32) - 1)
 
 
 def gaussian_iter(rng):
