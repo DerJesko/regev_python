@@ -6,12 +6,20 @@ from serialize import serialize_ndarray, deserialize_ndarray
 
 
 class RegevPublicParameters:
-    def __init__(self, n: int = None, m: int = None, cipher_mod: int = None, bs: int = 1, bound: int = None):
+    def __init__(self, n: int, m: int, cipher_mod: int, bs: int, bound: int):
         self.n = n
         self.m = m
         self.cipher_mod = cipher_mod
         self.bs = bs
         self.bound = bound
+
+    @classmethod
+    def for_pack(self, sec_param: int, num_add: int, num_mes: int, mes_mod: int):
+        n = 792
+        m = 32
+        bound = 20
+        cipher_mod = 8 * mes_mod * num_mes * bound * (num_add + 1)
+        return RegevPublicParameters(n, m, cipher_mod, num_mes, bound)
 
 
 class RegevKey:
@@ -58,12 +66,15 @@ class BatchedRegevCiphertext:
         if mes.ndim != 1:
             raise MessageWrongDimensions()
         if mes.shape[0] != pp.bs:
-            raise MessageWrongSize()
+            raise MessageWrongSize(
+                f"Expected message size {pp.bs}, got {mes.shape[0]}")
         mes = mes % mes_mod
         r = uniform(2, rng, lbound=-1, shape=(1, pp.m))
+        # print(r.tolist())
         c1 = r @ k.A % pp.cipher_mod
-        b = k.A @ k.sec + gaussian(pp.bound, rng, shape=(pp.m, pp.bs))
-        c2 = (r @ b + mround(pp.cipher_mod / mes_mod) * mes) % pp.cipher_mod
+        b = (c1 @ k.sec + gaussian(pp.bound, rng,
+                                   shape=(pp.m, pp.bs))) % pp.cipher_mod
+        c2 = (b + mround(pp.cipher_mod / mes_mod) * mes) % pp.cipher_mod
         return BatchedRegevCiphertext(c1, c2, mes_mod)
 
     def __repr__(self):
