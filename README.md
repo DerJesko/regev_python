@@ -55,11 +55,8 @@ Here should be a paragraph about the parameter choice
   - [x] ciphertext
   - [x] packed ciphertext
 - [x] seeded randomness (smaller secret keys)
-  - [ ] remove deprecation warning
-- [ ] speed improvements by implementing parts in Cython
+- [x] speed improvements by implementing parts in Cython
   - [x] serialization
-  - [ ] randomness
 - [ ] addition for packed ciphertexts
 - [x] unit testing framework
 - [ ] package things
-- [ ] example (federated learning)
